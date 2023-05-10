@@ -54,6 +54,17 @@ function initializeServiceWorker() {
   // B5. TODO - In the event that the service worker registration fails, console
   //            log that it has failed.
   // STEPS B6 ONWARDS WILL BE IN /sw.js
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => { 
+      navigator.serviceWorker.register('./sw.js') 
+        .then(registration => { 
+          console.log('ServiceWorker registration successful:', registration);
+        })
+        .catch(error => {
+          console.log('ServiceWorker registration failed:', error);
+        });
+    });
+  }
 }
 
 /**
@@ -68,6 +79,10 @@ async function getRecipes() {
   // EXPOSE - START (All expose numbers start with A)
   // A1. TODO - Check local storage to see if there are any recipes.
   //            If there are recipes, return them.
+  const recipes_local = localStorage.getItem('recipes');
+  if (recipes_local) {
+    return JSON.parse(recipes_local);
+  }
   /**************************/
   // The rest of this method will be concerned with requesting the recipes
   // from the network
@@ -78,6 +93,26 @@ async function getRecipes() {
   //            take two parameters - resolve, and reject. These are functions
   //            you can call to either resolve the Promise or Reject it.
   /**************************/
+  const recipes = [];
+  
+  return new Promise(async (resolve, reject) => {
+    try {
+      for (const url of RECIPE_URLS) {
+        const response = await fetch(url);
+        const recipeJson = await response.json();
+        recipes.push(recipeJson);
+        
+        if (recipes.length === RECIPE_URLS.length) {
+          saveRecipesToStorage(recipes);
+          resolve(recipes);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      reject(error);
+    }
+  });
+
   // A4-A11 will all be *inside* the callback function we passed to the Promise
   // we're returning
   /**************************/
